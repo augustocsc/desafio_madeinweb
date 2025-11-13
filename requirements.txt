@@ -1,0 +1,24 @@
+# Manipulação e Análise de Dados
+pandas
+numpy
+
+# Visualização (EDA)
+matplotlib
+seaborn
+geopandas # (Opcional) Para mapas, mas impressiona
+
+# Machine Learning
+scikit-learn
+xgboost
+lightgbm
+shap  # Essencial para explicabilidade
+
+# Ambiente e Deploy
+jupyterlab
+fastapi # Para o desenho da API
+pydantic # Para validação de dados da API
+joblib  # Para salvar o modelo
+
+fastapi
+uvicorn[standard]
+tabulate

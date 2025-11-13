@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Previsão de Preços | Simulação MLOps</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonte "Inter" (Premium Sans-Serif) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Aplicando a fonte "Inter" e o fundo Dark Mode */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* bg-slate-900 */
+        }
+        
+        /* Cor de destaque gradiente (Blue) */
+        .gradient-accent {
+            background-image: linear-gradient(to right, #3b82f6, #60a5fa); /* blue-600 to blue-400 */
+        }
+        
+        /* Texto em gradiente para o título (mais brilhante para Dark Mode) */
+        .gradient-text {
+            background-image: linear-gradient(to right, #60a5fa, #22d3ee); /* blue-400 to cyan-400 */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* Animação de Alerta (para retreino) - Versão Dark */
+        .pulse-alert {
+            animation: pulse-red-dark 1.5s infinite;
+            border-color: #ef4444; /* red-500 */
+        }
+        @keyframes pulse-red-dark {
+            0%, 100% {
+                opacity: 1;
+                background-color: #1e293b; /* slate-800 */
+            }
+            50% {
+                opacity: 0.8;
+                background-color: #334155; /* slate-700 */
+            }
+        }
+
+        /* Animações "Framer Motion" (Fade-in + Slide-up) */
+        @keyframes slideUpFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Aplicando a animação com delays escalonados */
+        .animate-slide-up {
+            opacity: 0; /* Começa invisível */
+            animation: slideUpFadeIn 0.6s ease-out forwards;
+        }
+        .slide-in-1 { animation-delay: 0.1s; }
+        .slide-in-2 { animation-delay: 0.2s; }
+        .slide-in-3 { animation-delay: 0.3s; }
+        .slide-in-4 { animation-delay: 0.4s; }
+        .slide-in-5 { animation-delay: 0.5s; }
+        .slide-in-6 { animation-delay: 0.6s; }
+
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-12 text-gray-100">
+
+    <!-- Container com max-width para layout balanceado -->
+    <div class="w-full max-w-6xl mx-auto">
+        
+        <!-- Cabeçalho -->
+        <header class="w-full text-center mb-12 animate-slide-up slide-in-1">
+            <h1 class="text-4xl lg:text-5xl font-bold text-gray-100">
+                Simulação de Pipeline MLOps
+            </h1>
+            <p class="text-lg text-gray-400 mt-3">
+                Previsão de Preços com Retreino <span class="gradient-text font-medium">Inteligente</span>
+            </p>
+        </header>
+
+        <!-- Barra de Status MLOps -->
+        <div id="mlops-status" class="w-full bg-slate-800 p-5 mb-8 rounded-2xl shadow-lg border border-slate-700 animate-slide-up slide-in-2">
+            <div class="flex flex-col sm:flex-row justify-between items-center text-sm font-medium">
+                <span class="flex items-center text-blue-400 mb-2 sm:mb-0">
+                    MONITORAMENTO MLOps
+                </span>
+                <span class="text-gray-400">
+                    Próxima Verificação: <span id="timer" class="font-mono text-lg text-blue-400">60</span>s
+                </span>
+                <div class="text-gray-400 text-right">
+                    Erro (MAPE) dos Novos Dados: 
+                    <span id="mape-status" class="font-mono text-lg text-gray-100">N/A</span>
+                    <div class="text-xs text-gray-500">Limite: 15%</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Conteúdo Principal -->
+        <main class="w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Coluna 1: Formulário de Entrada -->
+            <section class="lg:col-span-2 bg-slate-800 p-6 md:p-8 rounded-2xl shadow-lg border border-slate-700 animate-slide-up slide-in-3">
+                <h2 class="text-2xl font-semibold text-gray-100 mb-6">Simular Predição de Imóvel</h2>
+                <form id="prediction-form" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    <div class="col-span-1">
+                        <label class="block text-gray-400 font-medium mb-1">Área (Sqft Living)</label>
+                        <input type="number" id="sqft_living" value="2500" min="100" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-gray-400 font-medium mb-1">Qualidade (Grade: 1-13)</label>
+                        <input type="number" id="grade" value="8" min="1" max="13" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    </div>
+                    
+                    <div class="col-span-1">
+                        <label class="block text-gray-400 font-medium mb-1">Quartos</label>
+                        <input type="number" id="bedrooms" value="4" min="1" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-gray-400 font-medium mb-1">Banheiros</label>
+                        <input type="number" id="bathrooms" value="3.0" step="0.5" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-gray-400 font-medium mb-1">CEP (Zipcode - Seattle)</label>
+                        <input type="number" id="zipcode" value="98006" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    </div>
+
+                    <div class="col-span-2 mt-4">
+                        <button type="submit" class="w-full py-3 gradient-accent text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transform transition-all duration-300 focus:ring-4 focus:ring-blue-300">
+                            Prever Preço
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Coluna 2: Resultados e Feedback -->
+            <section class="lg:col-span-1 flex flex-col space-y-8">
+                
+                <!-- Resultado da Predição -->
+                <div class="gradient-accent text-white p-6 rounded-2xl shadow-xl animate-slide-up slide-in-4">
+                    <p class="text-base font-light mb-1 opacity-80">Preço Sugerido (USD)</p>
+                    <div id="prediction-result" class="text-5xl font-bold">
+                        $ --,--
+                    </div>
+                    <p id="prediction-confidence" class="text-sm mt-3 opacity-90">
+                        Margem de Confiança (MAE): $ (N/A)
+                    </p>
+                </div>
+
+                <!-- Dashboard de Atividade -->
+                <div class="bg-slate-800 p-5 rounded-2xl shadow-lg border border-slate-700 animate-slide-up slide-in-5">
+                    <h3 class="text-xl font-semibold text-gray-100 mb-4 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Atividade do Sistema
+                    </h3>
+                    <div class="text-sm space-y-3">
+                        <p class="text-gray-400 flex justify-between">
+                            Último Retreino: <span id="last-retrain" class="font-medium text-gray-100">N/A</span>
+                        </p>
+                        <p class="text-gray-400 flex justify-between">
+                            Feedback Coletado: <span id="feedback-count" class="font-medium text-blue-400">0</span>
+                        </p>
+                        <p class="text-gray-400 flex justify-between">
+                            Status: <span id="retrain-status" class="font-semibold text-yellow-400">MONITORANDO</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Feedback Manual -->
+                <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 animate-slide-up slide-in-6">
+                    <h3 class="text-lg font-semibold text-gray-100 mb-3">
+                        Simular Venda Real
+                    </h3>
+                    <input type="number" id="ground-truth-price" placeholder="Preço Real de Venda (USD)" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white mb-3">
+                    <button onclick="sendFeedback()" class="w-full py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transform transition-all duration-300 disabled:bg-gray-400">
+                        Enviar Feedback
+                    </button>
+                </div>
+
+            </section>
+        </main>
+    </div>
+    
+    <!-- Snackbar para mensagens -->
+    <div id="snackbar" class="fixed bottom-5 right-5 bg-white text-gray-900 font-semibold px-5 py-3 rounded-lg shadow-lg transition-all duration-300 opacity-0 -translate-y-2"></div>
+
+    <script>
+        // --- VARIÁVEIS GLOBAIS ---
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const CHECK_INTERVAL = 60; // 60 segundos
+        let timer = CHECK_INTERVAL;
+        let collectedFeedback = 0;
+        let lastPredictionData = null; // Guarda os dados da última predição
+
+        // --- DADOS DE SIMULAÇÃO (Para preencher o formulário) ---
+        const BASE_DATA = {
+            id: 1, date: '20241113T000000', bedrooms: 3, bathrooms: 2.5, sqft_living: 1800, sqft_lot: 5000, 
+            floors: 2.0, waterfront: 0, view: 0, condition: 3, grade: 7, sqft_above: 1800, sqft_basement: 0, 
+            yr_built: 1995, yr_renovated: 0, zipcode: 98033, lat: 47.67, long: -122.19, 
+            Mean_Income: 120000.0, Education_Bachelors_or_Higher: 55.0, Population_Density: 4500.0
+        };
+
+        // --- FUNÇÕES DE UTILIDADE ---
+        function showSnackbar(message, isError = false) {
+            const snackbar = document.getElementById('snackbar');
+            snackbar.textContent = message;
+            // Atualizado para Dark Mode: Erro é vermelho, sucesso é branco no preto
+            snackbar.className = `fixed bottom-5 right-5 px-5 py-3 rounded-lg shadow-lg transition-all duration-300 opacity-100 translate-y-0 ${isError ? 'bg-red-600 text-white' : 'bg-white text-gray-900 font-semibold'}`;
+            setTimeout(() => {
+                snackbar.classList.remove('opacity-100', 'translate-y-0');
+                snackbar.classList.add('opacity-0', '-translate-y-2');
+            }, 4000);
+        }
+        
+        function updateConfidenceMargin(newMargin) {
+            if (newMargin) {
+                document.getElementById('prediction-confidence').textContent = `Margem de Confiança (MAE): ± ${newMargin}`;
+            }
+        }
+
+        // --- LÓGICA DE PREDIÇÃO ---
+        document.getElementById('prediction-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            
+            const inputData = {
+                ...BASE_DATA,
+                sqft_living: parseInt(form.sqft_living.value),
+                grade: parseInt(form.grade.value),
+                bedrooms: parseInt(form.bedrooms.value),
+                bathrooms: parseFloat(form.bathrooms.value),
+                zipcode: parseInt(form.zipcode.value),
+                id: Date.now() 
+            };
+            
+            lastPredictionData = inputData;
+            document.getElementById('prediction-result').textContent = 'Aguarde...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(inputData),
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('prediction-result').textContent = result.predicted_price_usd;
+                    updateConfidenceMargin(result.confidence_margin_usd);
+                    showSnackbar('Predição Recebida!', false);
+                    document.getElementById('ground-truth-price').value = Math.round(result.predicted_price * 1.10); 
+                } else {
+                    document.getElementById('prediction-result').textContent = '$ Erro';
+                    showSnackbar(`Erro na API: ${result.detail}`, true);
+                }
+            } catch (error) {
+                document.getElementById('prediction-result').textContent = '$ API Offline';
+                showSnackbar(`Erro de Rede: API (uvicorn) não está rodando em ${API_BASE_URL}`, true);
+            }
+        });
+
+        // --- LÓGICA DE FEEDBACK ---
+        async function sendFeedback() {
+            const groundTruth = parseFloat(document.getElementById('ground-truth-price').value);
+            if (isNaN(groundTruth) || groundTruth <= 0) {
+                return showSnackbar('Por favor, insira um valor de venda real válido.', true);
+            }
+            if (!lastPredictionData) {
+                return showSnackbar('Faça uma predição antes de enviar o feedback.', true);
+            }
+
+            const feedbackData = {
+                ...lastPredictionData,
+                ground_truth_price: groundTruth
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(feedbackData),
+                });
+                
+                if (response.ok) {
+                    collectedFeedback++;
+                    document.getElementById('feedback-count').textContent = collectedFeedback;
+                    showSnackbar(`Feedback manual de $${groundTruth.toLocaleString()} coletado!`, false);
+                } else {
+                    const result = await response.json();
+                    showSnackbar(`Erro no Feedback: ${result.detail}`, true);
+                }
+            } catch (error) {
+                showSnackbar('Erro de Rede ao enviar Feedback (API Offline)', true);
+            }
+        }
+
+        // --- CICLO MLOPS INTELIGENTE (Performance-Based) ---
+        async function checkPerformance() {
+            const statusEl = document.getElementById('retrain-status');
+            statusEl.textContent = 'VERIFICANDO...';
+            statusEl.classList.remove('text-yellow-400', 'text-green-500');
+            statusEl.classList.add('text-blue-400', 'animate-pulse');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/check-performance`, { method: 'POST' });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    showSnackbar(`Erro na Verificação: ${result.detail}`, true);
+                    return;
+                }
+                
+                const mapeEl = document.getElementById('mape-status');
+                mapeEl.textContent = result.current_mape_pct || 'N/A';
+                
+                if (result.retrain_triggered) {
+                    mapeEl.classList.add('text-red-500', 'font-bold');
+                    mapeEl.classList.remove('text-gray-100');
+                    document.getElementById('mlops-status').classList.add('pulse-alert');
+                    
+                    showSnackbar(result.message, true);
+                    document.getElementById('last-retrain').textContent = `✅ NOVO MODELO! (${new Date().toLocaleTimeString()})`;
+                    statusEl.textContent = 'RETREINADO!';
+                    
+                    if (result.new_metrics && result.new_metrics.mae_usd_formatted) {
+                        updateConfidenceMargin(result.new_metrics.mae_usd_formatted);
+                        showSnackbar(`Modelo atualizado! Nova MAE: ${result.new_metrics.mae_usd_formatted}`, false);
+                    }
+                    
+                    collectedFeedback = 0; 
+                    document.getElementById('feedback-count').textContent = collectedFeedback;
+                    
+                } else {
+                    mapeEl.classList.remove('text-red-500', 'font-bold');
+                    mapeEl.classList.add('text-gray-100');
+                    document.getElementById('mlops-status').classList.remove('pulse-alert');
+                    
+                    showSnackbar(result.message, false);
+                    statusEl.textContent = 'ESTÁVEL';
+                }
+                
+            } catch (error) {
+                showSnackbar('Erro de Rede ao checar performance (API Offline)', true);
+                statusEl.textContent = 'ERRO DE REDE';
+            }
+            
+            statusEl.classList.remove('text-blue-400', 'animate-pulse');
+            statusEl.classList.add('text-green-500');
+        }
+
+        // --- TIMER AUTOMÁTICO (Simulação de Cronograma) ---
+        function updateTimer() {
+            document.getElementById('timer').textContent = timer;
+            
+            if (timer <= 0) {
+                collectedFeedback += 3; // Simula 3 vendas
+                document.getElementById('feedback-count').textContent = collectedFeedback;
+                showSnackbar('SIMULAÇÃO: 3 novos dados de feedback recebidos.', false);
+                
+                checkPerformance(); 
+                timer = CHECK_INTERVAL;
+            } else {
+                timer--;
+            }
+        }
+
+        // --- INICIALIZAÇÃO ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setInterval(updateTimer, 1000); // Roda a cada segundo
+            document.getElementById('last-retrain').textContent = `(Inicial: ${new Date().toLocaleTimeString()})`;
+            
+            // Simula o primeiro envio de feedback para o sistema não começar vazio
+            sendFeedback(BASE_DATA.Mean_Income * 7.5);
+            // Tenta buscar a margem de confiança inicial
+            document.getElementById('prediction-form').requestSubmit();
+        });
+
+    </script>
+</body>
+</html>
